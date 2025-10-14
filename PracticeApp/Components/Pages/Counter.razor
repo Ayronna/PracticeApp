@@ -1,0 +1,40 @@
+﻿@page "/counter"
+@rendermode InteractiveServer
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">+1</button>
+
+<button class="btn btn-primary" @onclick="DecreaseCount">-1</button>
+
+<button class="btn btn-primary" @onclick="Add10ToCount">+10</button>
+
+<button class="btn btn-primary" @onclick="Remove10FromCount">-10</button>
+
+@code {
+    private int currentCount = 0;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+
+    private void DecreaseCount()
+    {
+        currentCount--;
+    }
+
+    private void Add10ToCount()
+    {
+        currentCount += 10;
+    }
+
+    private void Remove10FromCount()
+    {
+        currentCount -= 10;
+    }
+}
