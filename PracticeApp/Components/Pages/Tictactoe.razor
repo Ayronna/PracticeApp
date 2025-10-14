@@ -1,5 +1,37 @@
-﻿<h3>Tictactoe</h3>
+﻿@page "/tictactoe"
+@rendermode InteractiveServer
+
+<h3>Tic Tac Toe</h3>
+
+<p>Rules:</p>
+<ul>
+    <li>Each player takes turns placing an X or an O on the field.</li>
+    <li>The game continues until a player successfully forms a line of three marks in a row.</li>
+    <li>Lines can be horizontal, vertical, or diagonal.</li>
+    <li>If all squares are filled without a winner, it’s a draw.</li>
+</ul>
+
+<div class="ttt-board">
+    @for (int i = 0; i < 9; i++)
+    {
+        <button class="ttt-button" @onclick="() => SetMarking(i)">
+            @cells[i]
+        </button>
+    }
+</div>
+
+<p>Current player: @currentPlayer</p>
 
 @code {
+    private string[] cells = new string[9];
+    private string currentPlayer = "X";
 
+    private void SetMarking(int index)
+    {
+        if (string.IsNullOrWhiteSpace(cells[index]))
+        {
+            cells[index] = currentPlayer; 
+            currentPlayer = currentPlayer == "X" ? "O" : "X";
+        }
+    }
 }
