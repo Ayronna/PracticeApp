@@ -27,6 +27,8 @@
     <p><strong>@statusMessage</strong></p>
 }
 
+<button class="ttt-reset" @onclick="ResetGame">Reset Game</button>
+
 @code {
     private string[] cells = new string[9];
     private string currentPlayer = "X";
@@ -98,5 +100,13 @@
             statusMessage = "Draw!";
             gameOver = true;
         }
+    }
+
+    private void ResetGame()
+    {
+        cells = new string[9];
+        currentPlayer = "X";
+        gameOver = false;
+        statusMessage = string.Empty;
     }
 }
