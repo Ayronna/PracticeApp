@@ -1,0 +1,235 @@
+﻿@page "/turnbasedcombat"
+@rendermode InteractiveServer
+
+<h3>TurnBasedCombat</h3>
+
+<div>
+    <p><strong>Player 1</strong></p>
+    <p>HP: @playerHp / @maxPlayerHp</p>
+
+    <p><strong>Enemy 1</strong></p>
+    <p>HP: @enemyHp / @maxEnemyHp</p>
+
+    <p>Current Turn: @currentTurn</p>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <p><strong>@statusMessage</strong></p>
+    }
+</div>
+
+<div class="role-selection">
+    <p><strong>Select Role (choose before starting):</strong></p>
+    <label>
+        <input type="radio"
+               name="role"
+               @onclick="() => SelectRole(Role.DamageDealer)"
+               checked="@(selectedRole == Role.DamageDealer)"
+               disabled="@(combatStarted)" />
+        Damage Dealer
+    </label>
+    <label style="margin-left:1rem">
+        <input type="radio"
+               name="role"
+               @onclick="() => SelectRole(Role.Healer)"
+               checked="@(selectedRole == Role.Healer)"
+               disabled="@(combatStarted)" />
+        Healer
+    </label>
+</div>
+
+<div class="controls" style="margin-top:1rem">
+    <button @onclick="StartCombat" disabled="@(combatStarted || selectedRole == Role.None)">Start Combat</button>
+    <button @onclick="ResetCombat">Reset Combat</button>
+
+    <button @onclick="DealDamage" disabled="@(!CanPlayerAct())">
+        Deal Damage!
+    </button>
+    <button @onclick="HealMe" disabled="@(!CanPlayerAct())">
+        Heal me!
+    </button>
+</div>
+
+@code {
+    private enum Role
+    {
+        None,
+        DamageDealer,
+        Healer
+    }
+
+    private readonly int maxPlayerHp = 100;
+    private readonly int maxEnemyHp = 100;
+
+    private int playerHp;
+    private int enemyHp;
+
+    private int playerAttackDamage = 20;
+    private int enemyAttackDamage = 15;
+    private int healAmount = 15;
+
+    private bool combatStarted = false;
+    private bool gameOver = false;
+    private bool isEnemyActing = false;
+
+    private string currentTurn = "None";
+    private string statusMessage = string.Empty;
+
+    private Role selectedRole = Role.None;
+    private readonly Random rng = new();
+
+    protected override void OnInitialized()
+    {
+        ResetCombat();
+    }
+
+    private void SelectRole(Role role)
+    {
+        if (combatStarted) return;
+        selectedRole = role;
+        statusMessage = $"Selected role: {selectedRole}";
+    }
+
+    private async Task StartCombat()
+    {
+        if (combatStarted && !gameOver)
+        {
+            return;
+        }
+
+        if (selectedRole == Role.None)
+        {
+            statusMessage = "Please select a role before starting.";
+            return;
+        }
+
+        gameOver = false;
+        combatStarted = true;
+        currentTurn = "Player";
+        statusMessage = $"Combat started. Player's turn. Role: {selectedRole}";
+        await Task.CompletedTask;
+    }
+
+    private async Task DealDamage()
+    {
+        if (!CanPlayerAct()) return;
+
+        int extra = 0;
+        if (selectedRole == Role.DamageDealer)
+        {
+            extra = rng.Next(5, 16);
+        }
+
+        int totalDamage = playerAttackDamage + extra;
+        enemyHp = Math.Max(0, enemyHp - totalDamage);
+        statusMessage = extra > 0
+            ? $"Player deals {playerAttackDamage} + {extra} extra = {totalDamage} damage."
+            : $"Player deals {totalDamage} damage.";
+
+        await CheckWinnerAsync();
+
+        if (!gameOver)
+        {
+            currentTurn = "Enemy";
+            await EnemyTurnAsync();
+        }
+    }
+
+    private async Task HealMe()
+    {
+        if (!CanPlayerAct()) return;
+
+        int extraHeal = 0;
+        if (selectedRole == Role.Healer)
+        {
+            extraHeal = rng.Next(5, 16);
+        }
+
+        int totalHeal = healAmount + extraHeal;
+        int actualHealed = Math.Min(totalHeal, maxPlayerHp - playerHp);
+        playerHp = Math.Min(maxPlayerHp, playerHp + totalHeal);
+
+        statusMessage = extraHeal > 0
+            ? actualHealed > 0
+                ? $"Player heals {healAmount} + {extraHeal} extra = {actualHealed} HP."
+                : "Player is already at full health."
+            : actualHealed > 0
+                ? $"Player heals {actualHealed} HP."
+                : "Player is already at full health.";
+
+        await CheckWinnerAsync();
+
+        if (!gameOver)
+        {
+            currentTurn = "Enemy";
+            await EnemyTurnAsync();
+        }
+    }
+
+    private async Task EnemyTurnAsync()
+    {
+        if (gameOver) return;
+
+        isEnemyActing = true;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+
+        int damage = enemyAttackDamage;
+        playerHp = Math.Max(0, playerHp - damage);
+        statusMessage = $"Enemy attacks and deals {damage} damage.";
+        await CheckWinnerAsync();
+
+        if (!gameOver)
+        {
+            currentTurn = "Player";
+        }
+
+        isEnemyActing = false;
+        StateHasChanged();
+    }
+
+    private async Task CheckWinnerAsync()
+    {
+        if (enemyHp <= 0 && playerHp <= 0)
+        {
+            statusMessage = "Both combatants fell. It's a draw.";
+            gameOver = true;
+            combatStarted = false;
+            currentTurn = "None";
+        }
+        else if (enemyHp <= 0)
+        {
+            statusMessage = "Player wins!";
+            gameOver = true;
+            combatStarted = false;
+            currentTurn = "None";
+        }
+        else if (playerHp <= 0)
+        {
+            statusMessage = "Enemy wins!";
+            gameOver = true;
+            combatStarted = false;
+            currentTurn = "None";
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private void ResetCombat()
+    {
+        playerHp = maxPlayerHp;
+        enemyHp = maxEnemyHp;
+        gameOver = false;
+        combatStarted = false;
+        isEnemyActing = false;
+        currentTurn = "None";
+        statusMessage = string.Empty;
+        selectedRole = Role.None;
+    }
+
+    private bool CanPlayerAct()
+    {
+        return combatStarted && !gameOver && currentTurn == "Player" && !isEnemyActing;
+    }
+}
